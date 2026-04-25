@@ -1713,3 +1713,33 @@
 .page-header {
   padding-right: 150px !important;
 }
+
+.apply-filters-btn {
+  width: 100%;
+  padding: 14px;
+  background: #1d9e75; /* O culoare verde de succes/sportiv */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  transition: transform 0.1s, background 0.2s;
+}
+
+.apply-filters-btn:hover {
+  background: #15805d;
+  transform: translateY(-1px);
+}
+
+.apply-filters-btn:active {
+  transform: translateY(0);
+}
+
+.apply-filters-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
