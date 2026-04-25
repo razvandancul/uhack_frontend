@@ -4,17 +4,17 @@ import "./comp/chatInput.css";
 
 import uclujLogo from "./U_Cluj.svg.png";
 
-import HomePage      from "./pages/HomePage";
+import HomePage from "./pages/HomePage";
 import ShortlistPage from "./pages/ShortlistPage";
-import SearchPage    from "./pages/SearchPage";
+import SearchPage from "./pages/SearchPage";
 import PlayerProfile from "./PlayerProfile";
 
 /* ─── CONFIG ────────────────────────────────────────────────────────────── */
 export const API_BASE = "/api";
 
 export const INITIAL_SHORTLISTS = [
-  { id: "main",   label: "Main Shortlist",  playerIds: [] },
-  { id: "u21",    label: "U21",             playerIds: [] },
+  { id: "main", label: "Main Shortlist", playerIds: [] },
+  { id: "u21", label: "U21", playerIds: [] },
   { id: "expiry", label: "Contract Expiry", playerIds: [] },
 ];
 
@@ -31,20 +31,63 @@ const NAV = [
   { id: "search",    label: "Search",    Icon: SearchIcon    },
 ];
 
+/* ─── LOGIN PAGE COMPONENT ─────────────────────────────────────────────── */
+function LoginPage({ onLogin }) {
+  const [u, setU] = useState("");
+  const [p, setP] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(u, p);
+  };
+
+  return (
+    <div className="login-page">
+      <form className="login-card" onSubmit={handleSubmit}>
+        <div className="login-logo">
+           <img src={uclujLogo} alt="Logo" style={{ width: 100, height: 100, objectFit: 'contain' }} />
+        </div>
+        <h2 style={{fontFamily: 'serif'}}>Login</h2>
+        <input 
+          type="text" 
+          placeholder="Nume Utilizator" 
+          value={u} 
+          onChange={e => setU(e.target.value)} 
+          required 
+          className="login-input"
+        />
+        <input 
+          type="password" 
+          placeholder="Parolă" 
+          value={p} 
+          onChange={e => setP(e.target.value)} 
+          required 
+          className="login-input"
+        />
+        <button type="submit" className="login-submit-btn">Intră în cont</button>
+      </form>
+    </div>
+  );
+}
+
 /* ─── ROOT ──────────────────────────────────────────────────────────────── */
 export default function App() {
-  /* ── Navigare ── */
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [displayUser, setDisplayUser] = useState("");
   const [activeTab, setActiveTab] = useState("home");
 
-  /* ── Shared state ── */
   const [shortlists, setShortlists] = useState(INITIAL_SHORTLISTS);
   const [playersDB,  setPlayersDB]  = useState({});
 
-  /* ── Overlays globale ── */
   const [profileId,       setProfileId]       = useState(null);
   const [shortlistTarget, setShortlistTarget] = useState(null);
 
-  /* ── Helpers ── */
+  const handleLoginSubmit = (username, password) => {
+    // MODIFICARE AICI: Folosim 'username' pentru afișare
+    setDisplayUser(username); 
+    setIsLoggedIn(true);
+  };
+
   const upsertPlayer = useCallback((player) => {
     if (!player?.id) return;
     setPlayersDB(db => ({ ...db, [player.id]: { ...db[player.id], ...player } }));
@@ -82,7 +125,6 @@ export default function App() {
     return id;
   }, []);
 
-  /* ── Props pasate paginilor ── */
   const sharedProps = {
     shortlists, playersDB, upsertPlayer,
     isPlayerInAnyShortlist,
@@ -91,10 +133,16 @@ export default function App() {
     onOpenStarModal: (player) => setShortlistTarget(player),
   };
 
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={handleLoginSubmit} />;
+  }
+
   return (
     <div className="App">
+      <div className="top-right-username">
+        {displayUser}
+      </div>
 
-      {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="sidebar-top">
           <div className="logo-wrap">
@@ -125,7 +173,7 @@ export default function App() {
           <div className="user-row">
             <div className="user-avatar"><PersonIcon /></div>
             <div>
-              <div className="user-name">Mister</div>
+              <div className="user-name">{displayUser}</div>
               <div className="user-role">Antrenor</div>
             </div>
             <div style={{ marginLeft: "auto" }}><ChevronIcon /></div>
@@ -133,26 +181,23 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
       <main className="main-content">
         {activeTab === "home"      && <HomePage      {...sharedProps} />}
         {activeTab === "shortlist" && <ShortlistPage {...sharedProps} />}
         {activeTab === "search"    && <SearchPage    {...sharedProps} />}
       </main>
 
-      {/* ── Player Profile overlay global ── */}
       {profileId && (
         <div className="profile-overlay">
           <PlayerProfile playerId={profileId} onBack={() => setProfileId(null)} />
         </div>
       )}
 
-      {/* ── Shortlist Modal global ── */}
       {shortlistTarget && (
         <ShortlistModal
           player={shortlistTarget}
           shortlists={shortlists}
-          onAdd={(slId)    => addToShortlist(slId, shortlistTarget)}
+          onAdd={(slId)     => addToShortlist(slId, shortlistTarget)}
           onRemove={(slId) => removeFromShortlist(slId, shortlistTarget.id)}
           onCreateShortlist={createShortlist}
           onClose={() => setShortlistTarget(null)}
@@ -162,7 +207,7 @@ export default function App() {
   );
 }
 
-/* ─── SHORTLIST MODAL ────────────────────────────────────────────────────── */
+/* ─── SHORTLIST MODAL (Rămâne neschimbat) ────────────────────────────────── */
 export function ShortlistModal({ player, shortlists, onAdd, onRemove, onCreateShortlist, onClose }) {
   const isIn = (slId) => shortlists.find(x => x.id === slId)?.playerIds.includes(player.id);
 
