@@ -94,6 +94,49 @@ function initials(name = "") {
     .toUpperCase();
 }
 
+/* ─── GROWTH POTENTIAL TAG ───────────────────────────────────────────────── */
+function GrowthTag({ value }) {
+  if (value == null) return null;
+
+  let label, bg, color;
+  if (value >= 75) {
+    label = "⚡ Top Prospect";
+    bg = "#eef9f5";
+    color = "#1d9e75";
+  } else if (value >= 55) {
+    label = "🌱 Talent";
+    bg = "#fff8e6";
+    color = "#b8770a";
+  } else if (value >= 35) {
+    label = "📊 Consolidat";
+    bg = "#f0f4ff";
+    color = "#3b5bdb";
+  } else {
+    label = "🔻 În declin";
+    bg = "#fff5f5";
+    color = "#c92a2a";
+  }
+
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        background: bg,
+        color,
+        padding: "2px 7px",
+        borderRadius: 4,
+        border: `1px solid ${color}33`,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 3,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 /* ─── MAPS ───────────────────────────────────────────────────────────────── */
 const POSITION_TO_ROLE = {
   Toate: null,
@@ -692,10 +735,6 @@ function FilterGroup({ title, children }) {
   );
 }
 
-/**
- * Filtre vizuale fără suport backend încă — input-urile sunt active
- * dar nu se trimit la server (placeholder pentru versiuni viitoare).
- */
 function ComingSoonRange({ label }) {
   return (
     <div className="f-row">
@@ -761,7 +800,9 @@ function PlayerRow({ player, isStarred, onStar, onOpenProfile }) {
         <div className="player-meta">
           {player.club} · {player.age} ani · {player.nationality}
         </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+        <div
+          style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}
+        >
           {player.rating != null && (
             <span
               style={{
@@ -803,6 +844,10 @@ function PlayerRow({ player, isStarred, onStar, onOpenProfile }) {
             >
               CMP. {player.behaviorCoefficient}
             </span>
+          )}
+          {/* ── GROWTH POTENTIAL TAG ── */}
+          {player.growthPotential != null && (
+            <GrowthTag value={player.growthPotential} />
           )}
         </div>
       </div>

@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE = "/api";
 
-/* ─── HELPERS ─────────────────────────────────────────────────────────────── */
-
 function initials(name = "") {
   return name
     .split(" ")
@@ -12,19 +10,16 @@ function initials(name = "") {
     .join("")
     .toUpperCase();
 }
-
 function avg(arr) {
   if (!arr || !arr.length) return null;
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
-
 const fmt1 = (val) => {
   if (val === null || val === undefined || val === "") return "—";
   const n = Number(val);
   if (isNaN(n)) return "—";
   return n.toFixed(1);
 };
-
 const pct = (val) => {
   if (val === null || val === undefined || val === "") return "—";
   const n = Number(val);
@@ -32,9 +27,76 @@ const pct = (val) => {
   return `${n.toFixed(0)}%`;
 };
 
-/* ─── ROOT COMPONENT ───────────────────────────────────────────────────────── */
+/* ─── GROWTH POTENTIAL TAG ─────────────────────────────────────────────────── */
+function GrowthTag({ value }) {
+  if (value == null) return null;
 
-export default function PlayerProfile({ playerId, onBack }) {
+  let label, bg, color;
+  if (value >= 80) {
+    label = "🚀 Top Potential";
+    bg = "#e8f9f3";
+    color = "#1d9e75";
+  } else if (value >= 65) {
+    label = "📈 High Potential";
+    bg = "#fff8e6";
+    color = "#b8770a";
+  } else if (value >= 50) {
+    label = "➡️ Mid Potential";
+    bg = "#f5f5f5";
+    color = "#555";
+  } else {
+    label = "📉 Low Potential";
+    bg = "#fff0f0";
+    color = "#c0392b";
+  }
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "5px 12px",
+        borderRadius: 7,
+        fontSize: 11,
+        fontWeight: 700,
+        background: bg,
+        color,
+        border: `1px solid ${color}22`,
+      }}
+    >
+      {label}
+      <span style={{ opacity: 0.6, fontSize: 10 }}>{value}/100</span>
+    </div>
+  );
+}
+
+/* ─── STAR ICON ────────────────────────────────────────────────────────────── */
+function StarIcon({ filled }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill={filled ? "#fff" : "none"}
+      stroke="#fff"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+/* ─── ROOT COMPONENT ───────────────────────────────────────────────────────── */
+export default function PlayerProfile({
+  playerId,
+  onBack,
+  isPlayerInAnyShortlist,
+  onOpenStarModal,
+  playersDB,
+}) {
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -60,6 +122,27 @@ export default function PlayerProfile({ playerId, onBack }) {
     fetchPlayer();
   }, [fetchPlayer]);
 
+  // Jucătorul din playersDB poate avea growthPotential de la search
+  const playerFromDB = playersDB?.[playerId];
+  const growthPotential =
+    player?.growthPotential ?? playerFromDB?.growthPotential ?? null;
+  const isStarred = isPlayerInAnyShortlist
+    ? isPlayerInAnyShortlist(playerId)
+    : false;
+
+  const handleShortlist = () => {
+    if (!onOpenStarModal) return;
+    // Construim un obiect minim pentru modal
+    const p = player ?? playerFromDB;
+    if (!p) return;
+    onOpenStarModal({
+      id: playerId,
+      name: p.name,
+      club: p.club,
+      position: p.position,
+    });
+  };
+
   return (
     <div style={S.root}>
       <main style={S.main}>
@@ -80,6 +163,20 @@ export default function PlayerProfile({ playerId, onBack }) {
                 </p>
               </div>
             </div>
+
+            {/* ── BUTON ADD TO SHORTLIST ── */}
+            {!loading && player && onOpenStarModal && (
+              <button
+                onClick={handleShortlist}
+                style={{
+                  ...S.shortlistBtn,
+                  background: isStarred ? "#1d9e75" : "#000",
+                }}
+              >
+                <StarIcon filled={isStarred} />
+                {isStarred ? "În Shortlist" : "Add to Shortlist"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -88,7 +185,6 @@ export default function PlayerProfile({ playerId, onBack }) {
             <div style={S.stateTitle}>Se încarcă profilul…</div>
           </div>
         )}
-
         {!loading && error && (
           <div style={S.centerState}>
             <div style={S.stateTitle}>Eroare la încărcare</div>
@@ -98,10 +194,9 @@ export default function PlayerProfile({ playerId, onBack }) {
             </button>
           </div>
         )}
-
         {!loading && !error && player && (
           <div style={S.content}>
-            <ProfileHeader player={player} />
+            <ProfileHeader player={player} growthPotential={growthPotential} />
             <TabBar active={tab} onChange={setTab} />
             {tab === "general" && <TabGeneral player={player} />}
             {tab === "pase" && <TabPase player={player} />}
@@ -116,8 +211,7 @@ export default function PlayerProfile({ playerId, onBack }) {
 }
 
 /* ─── PROFILE HEADER ──────────────────────────────────────────────────────── */
-
-function ProfileHeader({ player }) {
+function ProfileHeader({ player, growthPotential }) {
   return (
     <div style={S.profileTop}>
       <div style={S.avatarHero}>{initials(player.name)}</div>
@@ -138,6 +232,12 @@ function ProfileHeader({ player }) {
           <MetaChip label="Picior" value={player.preferredFoot ?? "—"} />
           <MetaChip label="Contract" value={player.contractUntil ?? "—"} />
         </div>
+        {/* ── GROWTH POTENTIAL TAG ── */}
+        {growthPotential != null && (
+          <div style={{ marginTop: 12 }}>
+            <GrowthTag value={growthPotential} />
+          </div>
+        )}
       </div>
       <div style={S.playerRightStats}>
         <div style={S.marketVal}>
@@ -163,7 +263,6 @@ function MetaChip({ label, value }) {
 }
 
 /* ─── TAB BAR ─────────────────────────────────────────────────────────────── */
-
 const TABS = [
   { id: "general", label: "Statistici generale" },
   { id: "pase", label: "Pase & Creativitate" },
@@ -189,7 +288,6 @@ function TabBar({ active, onChange }) {
 }
 
 /* ─── TAB: GENERAL ────────────────────────────────────────────────────────── */
-
 function TabGeneral({ player }) {
   const s = player.stats ?? {};
   const per90 = (val) =>
@@ -233,7 +331,6 @@ function TabGeneral({ player }) {
           sub="Eficiență finalizare"
         />
       </div>
-
       <div style={S.sectionTitle}>Eficiență (Procentaje Reușită)</div>
       <div style={S.ratingBarGroup}>
         <RatingBar label="Acuratețe Pase" value={s.pasesAccuracy} />
@@ -293,7 +390,6 @@ function RatingBar({ label, value }) {
 }
 
 /* ─── TAB: PASE ───────────────────────────────────────────────────────────── */
-
 function TabPase({ player }) {
   const s = player.stats ?? {};
   const per90 = (val) =>
@@ -373,12 +469,10 @@ function TabPase({ player }) {
 }
 
 /* ─── TAB: DUELURI ────────────────────────────────────────────────────────── */
-
 function TabDueluri({ player }) {
   const s = player.stats ?? {};
   const per90 = (val) =>
     val != null && s.minutes ? (val / s.minutes) * 90 : null;
-
   const duelsWonPct =
     s.duelsWon != null && s.duelsTotal
       ? (s.duelsWon / s.duelsTotal) * 100
@@ -433,7 +527,6 @@ function TabDueluri({ player }) {
 }
 
 /* ─── TAB: FORMĂ SEZON ────────────────────────────────────────────────────── */
-
 function TabForma({ player }) {
   const ratings = useMemo(
     () => player.seasonRatings ?? [],
@@ -446,7 +539,6 @@ function TabForma({ player }) {
       console.warn("Chart.js nu este încărcat");
       return;
     }
-
     const ctx = document.getElementById("formaChart");
     if (!ctx) return;
     if (ctx.__chartjs) ctx.__chartjs.destroy();
@@ -540,7 +632,6 @@ function TabForma({ player }) {
           aria-label="Grafic rating jucător per etapă"
         />
       </div>
-
       <div style={S.twoCol}>
         <div style={S.detailBlock}>
           <div style={S.sectionTitle}>Cele mai bune meciuri</div>
@@ -567,7 +658,6 @@ function TabForma({ player }) {
 }
 
 /* ─── TAB: SCOUT REPORT ───────────────────────────────────────────────────── */
-
 function TabScoutReport({ playerId }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -580,8 +670,7 @@ function TabScoutReport({ playerId }) {
     try {
       const res = await fetch(`${API_BASE}/player/${playerId}/scout-report`);
       if (!res.ok) throw new Error(`Eroare server: ${res.status}`);
-      const data = await res.json();
-      setReport(data);
+      setReport(await res.json());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -593,16 +682,14 @@ function TabScoutReport({ playerId }) {
     fetchReport();
   }, [fetchReport]);
 
-  if (loading) {
+  if (loading)
     return (
       <div style={S.centerState}>
         <div style={S.stateTitle}>🤖 AI generează raportul de scouting…</div>
         <div style={S.stateSub}>Durează ~10-15 secunde</div>
       </div>
     );
-  }
-
-  if (error) {
+  if (error)
     return (
       <div style={S.centerState}>
         <div style={S.stateTitle}>Eroare la generarea raportului</div>
@@ -612,8 +699,6 @@ function TabScoutReport({ playerId }) {
         </button>
       </div>
     );
-  }
-
   if (!report) return null;
 
   const {
@@ -624,7 +709,6 @@ function TabScoutReport({ playerId }) {
     scout_recommendation,
     meta,
   } = report;
-
   const recColor = (rec) => {
     if (!rec) return "#888";
     if (rec.includes("recomandat")) return "#1d9e75";
@@ -635,7 +719,6 @@ function TabScoutReport({ playerId }) {
 
   return (
     <div>
-      {/* Verdict */}
       <div style={{ ...S.detailBlock, marginBottom: 20 }}>
         <div
           style={{
@@ -669,7 +752,7 @@ function TabScoutReport({ playerId }) {
         >
           {verdict?.text}
         </div>
-        {verdict?.badges && verdict.badges.length > 0 && (
+        {verdict?.badges?.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {verdict.badges.map((b, i) => (
               <span
@@ -691,7 +774,6 @@ function TabScoutReport({ playerId }) {
         )}
       </div>
 
-      {/* Domains scoring */}
       {domains && (
         <div style={{ ...S.detailBlock, marginBottom: 20 }}>
           <div style={S.sectionTitle}>Evaluare pe domenii</div>
@@ -751,7 +833,7 @@ function TabScoutReport({ playerId }) {
       )}
 
       <div style={S.twoCol}>
-        {strengths && strengths.length > 0 && (
+        {strengths?.length > 0 && (
           <div style={{ ...S.detailBlock, borderLeft: "3px solid #1d9e75" }}>
             <div style={S.sectionTitle}>✓ Puncte forte</div>
             <ul
@@ -769,7 +851,7 @@ function TabScoutReport({ playerId }) {
             </ul>
           </div>
         )}
-        {weaknesses && weaknesses.length > 0 && (
+        {weaknesses?.length > 0 && (
           <div style={{ ...S.detailBlock, borderLeft: "3px solid #e63946" }}>
             <div style={S.sectionTitle}>✗ Puncte slabe</div>
             <ul
@@ -817,7 +899,6 @@ function TabScoutReport({ playerId }) {
 }
 
 /* ─── DETAIL ROWS ─────────────────────────────────────────────────────────── */
-
 function DetailRows({ rows }) {
   return (
     <div style={S.detailRows}>
@@ -838,7 +919,6 @@ function DetailRows({ rows }) {
 }
 
 /* ─── STYLES ──────────────────────────────────────────────────────────────── */
-
 const S = {
   root: {
     display: "flex",
@@ -895,6 +975,21 @@ const S = {
     color: "#888",
     fontFamily: "inherit",
   },
+  shortlistBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "9px 18px",
+    border: "none",
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#fff",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    transition: "background 0.2s",
+    flexShrink: 0,
+  },
   centerState: {
     flex: 1,
     display: "flex",
@@ -917,7 +1012,6 @@ const S = {
     cursor: "pointer",
   },
   content: { flex: 1, overflowY: "auto", padding: 32 },
-
   profileTop: {
     display: "grid",
     gridTemplateColumns: "auto 1fr auto",
@@ -1007,7 +1101,6 @@ const S = {
   },
   roLabel: { fontSize: 11, opacity: 0.6, letterSpacing: "0.4px" },
   roVal: { fontSize: 22, fontWeight: 700 },
-
   tabs: {
     display: "flex",
     borderBottom: "1px solid #e5e5e5",
@@ -1027,7 +1120,6 @@ const S = {
     marginBottom: -1,
   },
   tabActive: { color: "#000", borderBottomColor: "#000", fontWeight: 600 },
-
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
@@ -1055,7 +1147,6 @@ const S = {
     lineHeight: 1,
   },
   statCardSub: { fontSize: 12, color: "#aaa", marginTop: 4 },
-
   sectionTitle: {
     fontSize: 13,
     fontWeight: 700,
@@ -1086,14 +1177,12 @@ const S = {
     textAlign: "right",
     flexShrink: 0,
   },
-
   chartWrap: {
     position: "relative",
     width: "100%",
     height: 320,
     marginBottom: 24,
   },
-
   twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 },
   detailBlock: {
     border: "1px solid #e5e5e5",

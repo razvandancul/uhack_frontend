@@ -9,7 +9,6 @@ import ShortlistPage from "./pages/ShortlistPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerProfile from "./PlayerProfile";
 
-/* ─── CONFIG ────────────────────────────────────────────────────────────── */
 export const API_BASE = "/api";
 
 export const INITIAL_SHORTLISTS = [
@@ -18,7 +17,6 @@ export const INITIAL_SHORTLISTS = [
   { id: "expiry", label: "Contract Expiry", playerIds: [] },
 ];
 
-/* ─── ICONS ─────────────────────────────────────────────────────────────── */
 function HomeIcon() {
   return (
     <svg
@@ -105,16 +103,13 @@ const NAV = [
   { id: "search", label: "Search", Icon: SearchIcon },
 ];
 
-/* ─── LOGIN PAGE COMPONENT ─────────────────────────────────────────────── */
 function LoginPage({ onLogin }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
-
   const handleSubmit = (e) => {
     e.preventDefault();
     onLogin(u, p);
   };
-
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
@@ -150,7 +145,6 @@ function LoginPage({ onLogin }) {
   );
 }
 
-/* ─── ROOT ──────────────────────────────────────────────────────────────── */
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [displayUser, setDisplayUser] = useState("");
@@ -162,8 +156,7 @@ export default function App() {
   const [profileId, setProfileId] = useState(null);
   const [shortlistTarget, setShortlistTarget] = useState(null);
 
-  const handleLoginSubmit = (username, password) => {
-    // MODIFICARE AICI: Folosim 'username' pentru afișare
+  const handleLoginSubmit = (username) => {
     setDisplayUser(username);
     setIsLoggedIn(true);
   };
@@ -217,6 +210,17 @@ export default function App() {
     return id;
   }, []);
 
+  // Handler pentru shortlist modal — acceptă și obiecte parțiale (din PlayerProfile)
+  const handleOpenStarModal = useCallback(
+    (player) => {
+      // Dacă vine din PlayerProfile avem doar {id, name, club, position}
+      // Completăm din playersDB dacă există
+      const fromDB = playersDB[player.id] ?? {};
+      setShortlistTarget({ ...fromDB, ...player });
+    },
+    [playersDB],
+  );
+
   const sharedProps = {
     shortlists,
     playersDB,
@@ -226,17 +230,13 @@ export default function App() {
     removeFromShortlist,
     createShortlist,
     onOpenProfile: (id) => setProfileId(id),
-    onOpenStarModal: (player) => setShortlistTarget(player),
+    onOpenStarModal: handleOpenStarModal,
   };
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLoginSubmit} />;
-  }
+  if (!isLoggedIn) return <LoginPage onLogin={handleLoginSubmit} />;
 
   return (
     <div className="App">
-      <div className="top-right-username">{displayUser}</div>
-
       <aside className="sidebar">
         <div className="sidebar-top">
           <div className="logo-wrap">
@@ -295,11 +295,15 @@ export default function App() {
         {activeTab === "search" && <SearchPage {...sharedProps} />}
       </main>
 
+      {/* ── PLAYER PROFILE OVERLAY — cu toate props-urile necesare ── */}
       {profileId && (
         <div className="profile-overlay">
           <PlayerProfile
             playerId={profileId}
             onBack={() => setProfileId(null)}
+            isPlayerInAnyShortlist={isPlayerInAnyShortlist}
+            onOpenStarModal={handleOpenStarModal}
+            playersDB={playersDB}
           />
         </div>
       )}
@@ -318,7 +322,6 @@ export default function App() {
   );
 }
 
-/* ─── SHORTLIST MODAL (Rămâne neschimbat) ────────────────────────────────── */
 export function ShortlistModal({
   player,
   shortlists,
